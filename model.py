@@ -1,9 +1,21 @@
 import pandas as pd
+import numpy as np
+import pandas as pd
+import pickle
 
 def forecast(sales: dict, item_info: dict, store_info: dict):
     
     # функция предсказания продаж 1 товара 1 магазина на 14 дней
-def predict_future(df, model, predict_model, future, period):
+def predict_future(df, model, predict_model, period):
+    
+    # Загрузка модели
+    try:
+        with open('app/pickle_model/model_lgbm_v4.pcl', 'rb') as fid:
+            model = pickle.load(fid)
+    except:
+        with open('/code/app/pickle_model/model_lgbm_v4.pcl', 'rb') as fid:
+            model = pickle.load(fid)
+    
     # выбираем определенный магазин и отвар
     sku_st = df[(df['st_id'] == st_id) & (df['pr_sku_id'] == pr_sku_id)]
     df = sku_st.reset_index()
