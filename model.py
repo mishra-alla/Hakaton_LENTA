@@ -1,24 +1,52 @@
+from pyexpat import model
 import pandas as pd
 import numpy as np
 import pandas as pd
 import pickle
 
+MODEL=model
+PERIOD=14
+
+
 def forecast(sales: dict, item_info: dict, store_info: dict):
     
+    """
+    Функция для предсказания продажЖ
+    :params sales = pr_sales_in_units: исторические данные по продажам
+    :params item_info = pr_sku_id: характеристики товара
+    :params store_info = st_id: характеристики магазина
+
+    """
+    with open('app/pickle_model/model.pcl', 'rb') as fid:
+            model = pickle.load(fid)
+    with open('app/pickle_model/predict_model', 'rb') as fid:
+            predict_model = pickle.load(fid)
+    #загружаем датасет с календарем
+    with open('app/pickle_model/holidays_covid_calendar.csv', 'rb') as fid:
+            calendar = pickle.load(fid)
+    
+    # Создаем единый датасет data
+    data = {}
+    # Добавляем данные из словаря sales
+    for key in sales:
+        data[key] = item_info[key]
+    # Добавляем данные из словаря item_info
+    for key in item_info:
+        data[key] = item_info[key]
+     # Добавляем данные из словаря store_info
+    for key in store_info:
+        data[key] = store_info[key]
+   
+    #Выбираем один из наиболее популярных магазинов и продуктов
+    st_id = 'c81e728d9d4c2f636f067f89cc14862c'
+    pr_sku_id = '6b1344097385a42484abd4746371e416'
+    period=14
     # функция предсказания продаж 1 товара 1 магазина на 14 дней
-def predict_future(df, model, predict_model, period):
-    
-    # Загрузка модели
-    try:
-        with open('app/pickle_model/model_lgbm_v4.pcl', 'rb') as fid:
-            model = pickle.load(fid)
-    except:
-        with open('/code/app/pickle_model/model_lgbm_v4.pcl', 'rb') as fid:
-            model = pickle.load(fid)
-    
-    # выбираем определенный магазин и отвар
-    sku_st = df[(df['st_id'] == st_id) & (df['pr_sku_id'] == pr_sku_id)]
-    df = sku_st.reset_index()
+    #def predict_future(data, model, predict_model, period):
+
+    # выбираем определенный магазин и товар
+    sku_st = data[(data['st_id'] == st_id) & (data['pr_sku_id'] == pr_sku_id)]
+    data = sku_st.reset_index()
     future = model.make_future_df(periods=period) # датафрейм, для которого будем делать прогноз
     predict_model = predict_model.predict(future)
 
@@ -30,18 +58,18 @@ def predict_future(df, model, predict_model, period):
     future.set_index('date', inplace=True)
 
     # добавим данные из календаря о праздниках
-    future_df = future.merge(calendar[['holiday']], left_index=True, right_index=True, how='left')
+    data_future = future.merge(calendar[['holiday']], left_index=True, right_index=True, how='left')
 
     # вернем 'date' в колонку
-    future_df.reset_index(inplace=True)
+    data_future.reset_index(inplace=True)
 
-    pred_model = model.predict(df=future_df)
+    pred_model = model.predict(data=data_future)
 
-    pred_model[['prediction_5', 'prediction', 'prediction_95']] = (pred_model[['prediction_5', 'prediction', 'prediction_95']] \
+    pred_model[['prediction']] = (pred_model[['prediction']] \
                          .apply(lambda x: (x * pr_sales_in_units_sd) + pr_sales_in_units_mean))
 
-    sales_submission = pred_model.rename(columns={'prediction': 'target'}).drop(['prediction_5', 'prediction_95'], axis=1).round()
-    sales_submission = sales_submission.merge(df[['st_id', 'pr_sku_id']], left_index=True, right_index=True)
+    sales_submission = pred_model.rename(columns={'prediction': 'target'}).round()
+    sales_submission = sales_submission.merge(data[['st_id', 'pr_sku_id']], left_index=True, right_index=True)
     sales_submission = sales_submission.assign(st_id=st_id, pr_sku_id=pr_sku_id)
     sales_submission = sales_submission[['st_id', 'pr_sku_id', 'date', 'target']]
     return sales_submission
@@ -63,7 +91,7 @@ def predict_future(df, model, predict_model, period):
     for st_id in st_ids:
         for pr_sku_id in pr_sku_ids: # store_dict[st_id]:
             try:
-                df_1 = make_predict_future(df, st_id, pr_sku_id)
+                df_1 = make_predict_future(data, st_id, pr_sku_id)
                 result_df_future = result_df_future.append(df_1, ignore_index=True)
             except Exception as e:
                 print(f"Ошибка при обработке st_id:{st_id}, pr_sku_id:{pr_sku_id}: {e}")
@@ -72,13 +100,7 @@ def predict_future(df, model, predict_model, period):
 
 
 def forecast(sales: dict, item_info: dict, store_info: dict) -> list:
-    """
-    Функция для предсказания продажЖ
-    :params sales = pr_sales_in_units: исторические данные по продажам
-    :params item_info = pr_sku_id: характеристики товара
-    :params store_info = st_id: характеристики магазина
 
-    """
     sales = [el["sales_units"] for el in sales]
     mean_sale = sum(sales) / len(sales)
     return [mean_sale] * 5
