@@ -16,8 +16,13 @@ def forecast(sales: dict, item_info: dict, store_info: dict):
     params store_info: характеристики магазина (st_id - конкретный магазин)
 
     """
+<<<<<<< HEAD
     with open('app/pickle_model/model_cbr.pcl', 'rb') as fid:
             model_cbr = pickle.load(fid)
+=======
+    with open('app/pickle_model/model.pcl', 'rb') as fid:
+            model = pickle.load(fid)
+>>>>>>> f38c01ebdc56ffdb1ecf61d1aed2637eb703fdb2
     #загружаем датасет с календарем
     with open('app/pickle_model/holidays_covid_calendar.csv', 'rb') as fid:
             calendar = pickle.load(fid)
