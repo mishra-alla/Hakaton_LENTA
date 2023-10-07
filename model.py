@@ -36,6 +36,14 @@ def forecast(sales: dict, item_info: dict, store_info: dict):
      # Добавляем данные из словаря store_info
     for key in store_info:
         data[key] = store_info[key]
+
+def predict_sale(sales, store_info, item_info):
+    # Создание массива с параметрами квартиры
+    features = [[sales, store_info, item_info]]
+    # Выполнение предсказания с использованием обученной модели gs
+    predicted_sale = model.predict(features)
+
+    return predicted_sale[0]
    
     #Выбираем один из наиболее популярных магазинов и продуктов
     st_id = 'c81e728d9d4c2f636f067f89cc14862c'
