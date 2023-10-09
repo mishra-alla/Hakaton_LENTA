@@ -12,12 +12,12 @@ def prepare_data(data_list):
         #загружаем данные, представдленные в виде словарей и преобразовываеи их в табличный вид
         chunk_size=1000
         columns = list(data_list[0].keys())
-        data = pd.DataFrame(columns=columns)
+        data_list = pd.DataFrame(columns=columns)
         # Итеративно добавляем данные из списка словарей в DataFrame по чанкам
         for i in range(0, len(data_list), chunk_size):
             chunk = data_list[i:i + chunk_size]
             data_chunk = pd.DataFrame.from_records(chunk)
-            data = pd.concat([data, data_chunk], ignore_index=True)
+            data = pd.concat([data_list, data_chunk], ignore_index=True)
         return data
     data = covert_data(data_list)
     #data = data_list.copy()
@@ -33,12 +33,13 @@ def prepare_data(data_list):
     data['weekday'] = data['date'].dt.weekday
     data['day'] = data['date'].dt.day
     data.info()
+    data.set_index('date', inplace=True)
     # изменим порядок столбцов на более удобный
-    new_order = ['date', 'is_active', 'store', 'sku', 'sales_type', 'sales_units', 'sales_units_promo',
+    new_order = ['is_active', 'store', 'sku', 'sales_type', 'sales_units', 'sales_units_promo',
              'sales_rub', 'sales_rub_promo','group', 'category', 'subcategory', 'uom', 'division',
              'city', 'type_format', 'loc', 'size', 'year', 'month', 'day', 'weekday', 'holiday']
     data = data[new_order]
-    data.set_index('date', inplace=True)
+    #data.set_index('date', inplace=True)
     data.info()
     #Удалим магазины с малой активностью
     # список магазинов
@@ -73,7 +74,6 @@ def prepare_data(data_list):
     activ_store['sales_rub'] = activ_store['sales_rub'].replace(0, np.nan)
     activ_store['sales_units'] = activ_store['sales_units'].fillna(method='ffill') # заменим пропуски на значение
     activ_store['sales_rub'] = activ_store['sales_rub'].fillna(method='ffill')
-
     
     # первую стороку заполним средним значением
     activ_store['sales_units'] = activ_store['sales_units'].fillna(activ_store['sales_units'].mean())
@@ -83,7 +83,6 @@ def prepare_data(data_list):
     activ_store['sales_units_promo'] = activ_store['sales_units_promo'].astype(int) 
     activ_store.reset_index()
     
-
     # Добавим долю продаж промо 'promo_part' в таблицу
     # сделаем группировку и агрегацию по товарам, сорртировака по сумме
     ales_type_sorted = activ_store.groupby('sku')[['sales_units', 'sales_units_promo']]\
@@ -159,7 +158,7 @@ def prepare_data(data_list):
     for column in clast_activ_store.columns:
         if column not in numeric_columns:
             clast_activ_store[column] = clast_activ_store[column].astype('category')
-  
+    
     #Новые признаки
     def clast_futures(data, name_col, name, columns_to_process):
         for column in columns_to_process:
@@ -195,7 +194,7 @@ def prepare_data(data_list):
                                                           on=['sku', 'store', 'cluster'], how='left').set_index('date')
     data = clast_activ_store.copy()
     return data
-
+    
     def predict_sale(data):
         # Выполнение предсказания с использованием обученной модели model
         try:
