@@ -24,6 +24,8 @@
 def wape(y_true: np.array, y_pred: np.array):
 return np.sum(np.abs(y_true-y_pred))/np.sum(np.abs(y_true))
 ```
+**Стек:** `Временные ряды, pandas, numpy,seaborn, matplotlib, phik, CatBoost, ORBIT, ARIMAX, pickle, sklearn (pipeline, preprocessing, cluster)`
+
 ## **Описание проекта:**
 
 ### **Данные**
@@ -80,7 +82,6 @@ return np.sum(np.abs(y_true-y_pred))/np.sum(np.abs(y_true))
 - Метрика качества на л2 наиболее активных по продажам магазинах и 2х самых продаваемых товарах составляет **MAPE = 19%**
 - Для реализации задачи обучена модель **CatBoostRegressor**.
 - данные подаются в продакшн.
-- **Стек:** `Временные ряды, pandas, numpy,seaborn, matplotlib, phik, CatBoost, ORBIT, ARIMAX, pickle, sklearn (pipeline, preprocessing, cluster)`
 
 # Команда DS:
 - Алла Мишра
