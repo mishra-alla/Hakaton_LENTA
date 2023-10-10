@@ -7,21 +7,40 @@ import pickle
 MODEL=model
 PERIOD=14
 
-def prepare_data(data, calendar):
-
-    #сделаем дату индексом и переведем в объект datetime
+def prepare_data(data_list):
+    def covert_data(data_list):
+        #загружаем данные, представдленные в виде словарей и преобразовываеи их в табличный вид
+        chunk_size=1000
+        columns = list(data_list[0].keys())
+        data_list = pd.DataFrame(columns=columns)
+        # Итеративно добавляем данные из списка словарей в DataFrame по чанкам
+        for i in range(0, len(data_list), chunk_size):
+            chunk = data_list[i:i + chunk_size]
+            data_chunk = pd.DataFrame.from_records(chunk)
+            data = pd.concat([data_list, data_chunk], ignore_index=True)
+        return data
+    data = covert_data(data_list)
+    #data = data_list.copy()
+    #определяем типы данных
+    columns_to_convert = ['sales_type', 'type_format', 'loc', 'size', 'is_active', 'uom', 'holiday']
+    #df[columns_to_convert] = df[columns_to_convert].apply(pd.to_numeric, errors='coerce', downcast='integer')
+    data['date'] = pd.to_datetime(data['date'])
+    data[columns_to_convert] = data[columns_to_convert].apply(pd.to_numeric, errors='coerce').astype('Int64')
+    #создаем новые признаки 
+    #data.reset_index('date', inplace=True)
+    data['year'] = data['date'].dt.year
+    data['month'] = data['date'].dt.month
+    data['weekday'] = data['date'].dt.weekday
+    data['day'] = data['date'].dt.day
+    data.info()
     data.set_index('date', inplace=True)
-    data.index = pd.to_datetime(data.index)
-    calendar.set_index('date', inplace=True)
-    calendar.index = pd.to_datetime(calendar.index)
-    # добавим календарь праздников к данным
-    data = pd.merge(calendar, merged_df, left_index=True, right_index=True)
-    # изменим порядок столбцов на удобный
+    # изменим порядок столбцов на более удобный
     new_order = ['is_active', 'store', 'sku', 'sales_type', 'sales_units', 'sales_units_promo',
              'sales_rub', 'sales_rub_promo','group', 'category', 'subcategory', 'uom', 'division',
              'city', 'type_format', 'loc', 'size', 'year', 'month', 'day', 'weekday', 'holiday']
     data = data[new_order]
-
+    #data.set_index('date', inplace=True)
+    data.info()
     #Удалим магазины с малой активностью
     # список магазинов
     list_store = data['store'].unique().tolist()
@@ -49,23 +68,21 @@ def prepare_data(data, calendar):
                 | (activ_store['sales_rub_promo'] < 0))
     # удаляем строки, соответствующие маске, из activ_store
     activ_store = activ_store[~mask_negativ]
-
+    
     # Обработка нулевых значений (заполним нули в столбцах sales_units и sales_rub)
     activ_store['sales_units'] = activ_store['sales_units'].replace(0, np.nan) # меням 0 на пропуски
     activ_store['sales_rub'] = activ_store['sales_rub'].replace(0, np.nan)
     activ_store['sales_units'] = activ_store['sales_units'].fillna(method='ffill') # заменим пропуски на значение
     activ_store['sales_rub'] = activ_store['sales_rub'].fillna(method='ffill')
-
-
+    
     # первую стороку заполним средним значением
     activ_store['sales_units'] = activ_store['sales_units'].fillna(activ_store['sales_units'].mean())
     activ_store['sales_rub'] = activ_store['sales_rub'].fillna(activ_store['sales_rub'].mean())
     # приведем к целым значениям
     activ_store['sales_units'] = activ_store['sales_units'].astype(int)
-    activ_store['sales_units_promo'] = activ_store['sales_units_promo'].astype(int)
+    activ_store['sales_units_promo'] = activ_store['sales_units_promo'].astype(int) 
     activ_store.reset_index()
-
-
+    
     # Добавим долю продаж промо 'promo_part' в таблицу
     # сделаем группировку и агрегацию по товарам, сорртировака по сумме
     ales_type_sorted = activ_store.groupby('sku')[['sales_units', 'sales_units_promo']]\
@@ -141,8 +158,7 @@ def prepare_data(data, calendar):
     for column in clast_activ_store.columns:
         if column not in numeric_columns:
             clast_activ_store[column] = clast_activ_store[column].astype('category')
-
-
+    
     #Новые признаки
     def clast_futures(data, name_col, name, columns_to_process):
         for column in columns_to_process:
@@ -176,42 +192,13 @@ def prepare_data(data, calendar):
     # соединим с исходной таблицей activ_store
     clast_activ_store = clast_activ_store.reset_index().merge(sku_sales_sum[['sku', 'store', 'cluster']],\
                                                           on=['sku', 'store', 'cluster'], how='left').set_index('date')
-    return clast_activ_store
-
-def forecast(sales: dict, item_info: dict, store_info: dict):
+    data = clast_activ_store.copy()
+    return data
     
-    """
-    Функция для предсказания продаж:
-    params sales:  исторические данные по продажам (pr_sales_in_units - целевой признак)
-    params item_info: характеристики товара (pr_sku_id - конкретный товар)
-    params store_info: характеристики магазина (st_id - конкретный магазин)
-
-    """
-    with open('app/pickle_model/model_cbr.pcl', 'rb') as fid:
-            model_cbr = pickle.load(fid)
-    #загружаем датасет с календарем
-    with open('app/pickle_model/holidays_covid_calendar.csv', 'rb') as fid:
-            calendar = pickle.load(fid)
-    
-    # Создаем единый датасет data
-    data = {}
-    # Добавляем данные из словаря sales
-    for key in sales:
-        data[key] = item_info[key]
-    # Добавляем данные из словаря item_info
-    for key in item_info:
-        data[key] = item_info[key]
-     # Добавляем данные из словаря store_info
-    for key in store_info:
-        data[key] = store_info[key]
-
-
-    def predict_sale(sales, store_info, item_info):
-        # Создание массива с параметрами квартиры
-        features = [[sales, store_info, item_info]]
-        # Выполнение предсказания с использованием обученной модели gs
+    def predict_sale(data):
+        # Выполнение предсказания с использованием обученной модели model
         try:
-            predicted_sale = model.predict(features)
+            predicted_sale = model.predict(data)
         except:
             print('по данному товару прогноз невозможен, проверьте данные по товару или магазину')
     return predicted_sale[0]
