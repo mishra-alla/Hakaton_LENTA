@@ -86,4 +86,4 @@ return np.sum(np.abs(y_true-y_pred))/np.sum(np.abs(y_true))
 # Команда DS:
 Алла Мишра
 Михаил Грибанов
-Ирина Балычева
+Ирина Балычева 
