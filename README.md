@@ -18,8 +18,6 @@
 
 **Целевой признак:** **`sales_units`** – общее число проданных товаров (шт.)
 
-**Стек:** `Временные ряды, pandas, numpy,seaborn, matplotlib, phik, CatBoost, ORBIT, ARIMAX, pickle, sklearn (pipeline, preprocessing, cluster)`
-
 **Метрика качества:** **MAPE**, посчитанный на уровне товар, магазин, день.
 > Если есть пропущенные значения и по каким-то товарам не предоставлен прогноз, прогноз считается равным нулю.
 ```
@@ -82,6 +80,7 @@ return np.sum(np.abs(y_true-y_pred))/np.sum(np.abs(y_true))
 - Метрика качества на л2 наиболее активных по продажам магазинах и 2х самых продаваемых товарах составляет **MAPE = 19%**
 - Для реализации задачи обучена модель **CatBoostRegressor**.
 - данные подаются в продакшн.
+- **Стек:** `Временные ряды, pandas, numpy,seaborn, matplotlib, phik, CatBoost, ORBIT, ARIMAX, pickle, sklearn (pipeline, preprocessing, cluster)`
 
 # Команда DS:
 - Алла Мишра
