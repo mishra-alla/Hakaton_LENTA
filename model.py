@@ -205,4 +205,4 @@ def prepare_data(data_list):
 
     #формирование списка предсказанной цены
 
-    predicted_sales = data.apply(lambda row: predict_sale(row['pr_sales_in_units'], row['st_id'],row['pr_sku_id']), axis=1).tolist()
+    predicted_sales = data.apply(lambda row: predict_sale(row['sales_units'], row['store'],row['sku']), axis=1).tolist()

@@ -4,3 +4,4 @@ scikit-learn==1.2.2
 requests  #библиотека которая умеет выполнять вебзапросы
 pickle = 3.8
 orbit-ml = 1.1.4.2
+catboost = 1.2.2
